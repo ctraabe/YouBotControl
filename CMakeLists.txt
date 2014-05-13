@@ -38,6 +38,7 @@ INCLUDE_DIRECTORIES(
 ## Compile and link
 ADD_EXECUTABLE(youBot_FeedbackControl
   src/main.cpp
+  src/serial.cpp
 )
 
 TARGET_LINK_LIBRARIES(youBot_FeedbackControl 
