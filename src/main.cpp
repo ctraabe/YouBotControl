@@ -30,6 +30,16 @@ struct PTAMPacket_t {
 	uint16_t checksum;
 } __attribute__((packed));
 
+// Definition of packet from PTAM
+struct VehiclePacket_t {
+	uint16_t motor_mask[2];
+	uint16_t checksum;
+	int16_t collective;
+	int16_t yaw;
+	int16_t pitch;
+	int16_t roll;
+} __attribute__((packed));
+
 
 static void sigterm_handler(int sig)
 {
@@ -111,50 +121,142 @@ static int init()
 	return 0;
 }
 
-uint16_t checksum(const uint8_t* data, size_t length)
+static uint16_t checksum(const uint8_t* data, size_t length)
 {
-  uint16_t sum = 0;
+	uint16_t sum = 0;
 
-  for (size_t i = 0; i < length; ++i)
-    sum += data[i];
+	for (size_t i = 0; i < length; ++i)
+		sum += data[i];
 
-  return sum;
+	return sum;
 }
 
-bool parse_ptam_packet(PTAMPacket_t* const ptam_packet,
+static void convert_endienness(uint16_t* word)
+{
+	uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
+	uint8_t temp = byte_array[0];
+	byte_array[0] = byte_array[1];
+	byte_array[1] = temp;
+}
+
+static void convert_endienness(int16_t* word)
+{
+	uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
+	uint8_t temp = byte_array[0];
+	byte_array[0] = byte_array[1];
+	byte_array[1] = temp;
+}
+
+static void convert_endienness(uint32_t* word) {
+	uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
+	uint8_t temp = byte_array[0];
+	byte_array[0] = byte_array[1];
+	byte_array[1] = byte_array[2];
+	byte_array[2] = byte_array[0];
+	byte_array[0] = byte_array[3];
+	byte_array[3] = temp;
+}
+
+static bool parse_ptam_packet(PTAMPacket_t* const ptam_packet,
 	const uint8_t* const rx_buffer, const int num_bytes_received)
 {
-		const uint8_t ptam_packet_size = sizeof(PTAMPacket_t);
-		static union bus {
-			PTAMPacket_t ptam_packet;
-			uint8_t bytes[ptam_packet_size];
-		} rx_packet;
+	const uint8_t ptam_packet_size = sizeof(PTAMPacket_t);
+	static union bus {
+		PTAMPacket_t ptam_packet;
+		uint8_t bytes[ptam_packet_size];
+	} rx_packet;
 
-		static int num_bytes_stored = -1;  // -1 indicates header not yet received
+	static int num_bytes_stored = -1;  // -1 indicates header not yet received
 
-		for (int i = 0; (i < num_bytes_received)
-			&& (num_bytes_stored < ptam_packet_size); ++i)
+	for (int i = 0; (i < num_bytes_received)
+		&& (num_bytes_stored < ptam_packet_size); ++i)
+	{
+		if ((num_bytes_stored > 0) || (rx_buffer[i] == 0xE5))
+			rx_packet.bytes[num_bytes_stored++] = rx_buffer[i];
+	}
+
+	if (num_bytes_stored == ptam_packet_size)
+	{
+		num_bytes_stored = 0;
+		if (checksum(rx_packet.bytes, ptam_packet_size - 2)
+			== rx_packet.ptam_packet.checksum)
 		{
-			if ((num_bytes_stored > 0) || (rx_buffer[i] == 0xE5))
+			*ptam_packet = rx_packet.ptam_packet;
+			return true;
+		}
+		else
+		{
+			cout << "Checksum error." << endl;
+		}
+	}
+
+	return false;
+}
+
+static bool parse_vehicle_packet(VehiclePacket_t* const vehicle_packet,
+	const uint8_t* const rx_buffer, const int num_bytes_received)
+{
+	const uint8_t vehicle_packet_size = sizeof(VehiclePacket_t);
+	static union bus {
+		VehiclePacket_t vehicle_packet;
+		uint8_t bytes[vehicle_packet_size];
+	} rx_packet;
+
+	static int num_bytes_stored = -1;  // -1 indicates header not yet received
+	static uint8_t last_byte_received = 0;
+
+	for (int i = 0; i < num_bytes_received; ++i)
+	{
+		if (num_bytes_stored < 0)  // Header not yet received
+		{
+			if ((last_byte_received == '~') && (rx_buffer[i] == '~'))
+				num_bytes_stored = 0;  // indicates that header has been received
+			else
+				last_byte_received = rx_buffer[i];
+		}
+		else  // Header received
+		{
+			if (num_bytes_stored < vehicle_packet_size)
 				rx_packet.bytes[num_bytes_stored++] = rx_buffer[i];
 		}
+	}
 
-		if (num_bytes_stored == ptam_packet_size)
+	if (num_bytes_stored == vehicle_packet_size)
+	{
+		// cout << "Collective: " << rx_packet.vehicle_packet.collective
+		// 	<< " Yaw:" << rx_packet.vehicle_packet.yaw
+		// 	<< " Pitch:" << rx_packet.vehicle_packet.pitch
+		// 	<< " Roll:" << rx_packet.vehicle_packet.roll << endl;
+
+		num_bytes_stored = -1;  // Start looking for the header again
+		last_byte_received = 0;
+
+		convert_endienness(&rx_packet.vehicle_packet.motor_mask[0]);
+		convert_endienness(&rx_packet.vehicle_packet.motor_mask[1]);
+		convert_endienness(&rx_packet.vehicle_packet.checksum);
+		convert_endienness(&rx_packet.vehicle_packet.collective);
+		convert_endienness(&rx_packet.vehicle_packet.yaw);
+		convert_endienness(&rx_packet.vehicle_packet.pitch);
+		convert_endienness(&rx_packet.vehicle_packet.roll);
+
+		uint16_t computed_checksum = rx_packet.vehicle_packet.motor_mask[0]
+			+ rx_packet.vehicle_packet.motor_mask[1]
+			+ (uint16_t)(rx_packet.vehicle_packet.collective
+			+ rx_packet.vehicle_packet.yaw + rx_packet.vehicle_packet.pitch
+			+ rx_packet.vehicle_packet.roll);
+		if (rx_packet.vehicle_packet.checksum == computed_checksum)
 		{
-			num_bytes_stored = 0;
-			if (checksum(rx_packet.bytes, ptam_packet_size - 2)
-				== rx_packet.ptam_packet.checksum)
-			{
-				*ptam_packet = rx_packet.ptam_packet;
-				return true;
-			}
-			else
-			{
-				cout << "Checksum error." << endl;
-			}
+			*vehicle_packet = rx_packet.vehicle_packet;
+			return true;
 		}
+		else
+		{
+			cout << "Checksum error: expected " << rx_packet.vehicle_packet.checksum
+				<< " but computed " << computed_checksum << endl;
+		}
+	}
 
-		return false;
+	return false;
 }
 
 void arm_position(const float position_array[5])
@@ -186,22 +288,20 @@ int main()
 	if (!base_exists)
 		return 1;
 
-	Serial serial("/dev/ttyS0", 38400);
-	// if (!serial.IsOpen())
-	// {
-	// 	cout << "Failed to open com port" << endl;
-	// 	return 1;
-	// }
+	// Serial serial("/dev/ttyS0", 38400);  // Serial port
+	Serial serial("/tmp/pty2", 38400);  // Virtual serial port
+	if (!serial.IsOpen())
+		return 1;
 
 	arm_position(arm_up);
 
 	// Starting the event loop
 	while (received_sigterm == 0)
 	{
-		PTAMPacket_t ptam_packet;
 		uint8_t rx_buffer[1024] = {0};
 		int bytes_received = serial.Read(rx_buffer, 128);
-
+/*
+		PTAMPacket_t ptam_packet;
 		if (parse_ptam_packet(&ptam_packet, rx_buffer, bytes_received))
 		{
 			cout << ptam_packet.position[2] << endl;
@@ -217,6 +317,10 @@ int main()
 				cout << "BaseWHAT: " << ex.what() << endl;
 			}
 		}
+*/
+
+		VehiclePacket_t vehicle_packet;
+		parse_vehicle_packet(&vehicle_packet, rx_buffer, bytes_received);
 
 		usleep(10000);
 	}
