@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "";
+echo "pseudo-serial connection will start on dummy ports /tmp/pty1 and /tmp/pty2";
+echo "";
+
+if pidof socat > /dev/null; then
+	echo "socat seems to already be running...";
+	echo "";
+else
+	socat -d -d pty,raw,echo=0,link=/tmp/pty1 pty,raw,echo=0,link=/tmp/pty2 &
+fi
