@@ -18,18 +18,6 @@ static volatile int received_nb_signals = 0;
 static float arm_up[5] = {1.0, 1.0, -1.0, 1.0, 1.0},
 	arm_down[5] = {0.11, 0.11, -0.11, 0.11, 0.12};
 
-// Definition of packet from PTAM
-struct PTAMPacket_t {
-	uint8_t header;
-	uint64_t time; // In microseconds since epoch
-	float position[3];
-	float yaw;
-	float pitch;
-	float roll;
-	uint8_t has_tracking;
-	uint16_t checksum;
-} __attribute__((packed));
-
 // Definition of packet from vehicle wrapper
 struct VehiclePacket_t {
 	uint16_t motor_mask[2];
@@ -163,42 +151,6 @@ static void convert_endienness(uint32_t* word) {
 	byte_array[2] = byte_array[0];
 	byte_array[0] = byte_array[3];
 	byte_array[3] = temp;
-}
-
-static bool parse_ptam_packet(PTAMPacket_t* const ptam_packet,
-	const uint8_t* const rx_buffer, const int num_bytes_received)
-{
-	const uint8_t ptam_packet_size = sizeof(PTAMPacket_t);
-	static union bus {
-		PTAMPacket_t ptam_packet;
-		uint8_t bytes[ptam_packet_size];
-	} rx;
-
-	static int num_bytes_stored = -1;  // -1 indicates header not yet received
-
-	for (int i = 0; (i < num_bytes_received)
-		&& (num_bytes_stored < ptam_packet_size); ++i)
-	{
-		if ((num_bytes_stored > 0) || (rx_buffer[i] == 0xE5))
-			rx.bytes[num_bytes_stored++] = rx_buffer[i];
-	}
-
-	if (num_bytes_stored == ptam_packet_size)
-	{
-		num_bytes_stored = 0;
-		if (checksum(rx.bytes, ptam_packet_size - 2)
-			== rx.ptam_packet.checksum)
-		{
-			*ptam_packet = rx.ptam_packet;
-			return true;
-		}
-		else
-		{
-			cout << "Checksum error." << endl;
-		}
-	}
-
-	return false;
 }
 
 static bool parse_vehicle_packet(VehiclePacket_t* const vehicle_packet,
@@ -371,24 +323,6 @@ int main()
 	{
 		uint8_t rx_buffer[1024] = {0};
 		int bytes_received = serial.Read(rx_buffer, 128);
-/*
-		PTAMPacket_t ptam_packet;
-		if (parse_ptam_packet(&ptam_packet, rx_buffer, bytes_received))
-		{
-			cout << ptam_packet.position[2] << endl;
-
-			try
-			{
-				youbot_base->setBaseVelocity((1.0 - ptam_packet.position[2])
-					* meter_per_second, 0.0 * meter_per_second, 0.0
-					* M_PI * radian_per_second);
-			}
-			catch(exception& ex)
-			{
-				cout << "BaseWHAT: " << ex.what() << endl;
-			}
-		}
-*/
 
 		VehiclePacket_t vehicle_packet;
 		if (parse_vehicle_packet(&vehicle_packet, rx_buffer, bytes_received))
