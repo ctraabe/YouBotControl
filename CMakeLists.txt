@@ -1,4 +1,4 @@
-PROJECT(youBot_FeedbackControl)
+PROJECT(youBot_CSL)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 ## check required prerequisites
@@ -36,15 +36,15 @@ INCLUDE_DIRECTORIES(
 )
 
 ## Compile and link
-ADD_EXECUTABLE(youBot_FeedbackControl
+ADD_EXECUTABLE(youBot_CSL
   src/main.cpp
   src/serial.cpp
 )
 
-TARGET_LINK_LIBRARIES(youBot_FeedbackControl 
+TARGET_LINK_LIBRARIES(youBot_CSL 
 	${OODL_YOUBOT_LIBRARIES}
 	${Boost_LIBRARIES}
 	pthread
 )
 
-INSTALL(TARGETS youBot_FeedbackControl RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+INSTALL(TARGETS youBot_CSL RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)

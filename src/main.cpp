@@ -92,7 +92,7 @@ static int youbot_init()
 		arm_exists = false;
 	}
 
-	config_file = new youbot::ConfigFile("youbot_control", CONFIG_DIR);
+	config_file = new youbot::ConfigFile("csl", CONFIG_DIR);
 	if( !config_file )
 	{
 		cout << "Could not load file: " << CONFIG_DIR << config_file
