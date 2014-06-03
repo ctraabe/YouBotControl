@@ -304,25 +304,48 @@ int main()
 	signal(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
 
 	youbot_init();
-/*
+
 	if (!arm_exists)
 		return 1;
-*/
+
 	if (!base_exists)
 		return 1;
 
-	// Serial serial("/dev/ttyS0", 38400);  // Serial port
-	Serial serial("/tmp/pty2", 38400);  // Virtual serial port
-	if (!serial.IsOpen())
+	Serial serial_csl("/tmp/pty2", 38400);  // vehicle wrapper serial comms
+	if (!serial_csl.IsOpen())
 		return 1;
 
-	// arm_position(arm_up);
+	Serial serial_odometry("/tmp/pty4", 38400);  // Odometry data output
+	if (!serial_odometry.IsOpen())
+		return 1;
+
+	youbot::GripperBarSpacingSetPoint barSetPoint;
+	youbot::GripperSensedBarSpacing barSensed;
+	barSetPoint.barSpacing = 0.023 * meter;
+	youbot_arm->getArmGripper().setData(barSetPoint);
+	do {
+		SLEEP_MILLISEC(50);
+		youbot_arm->getArmGripper().getData(barSensed);
+	} while (barSensed.barSpacing < 0.022 * meter);
+
+	youbot::JointAngleSetpoint target_joint_angle;
+	youbot::JointSensedAngle jointSensed;
+	target_joint_angle.angle = arm_up[4] * radian;
+	youbot_arm->getArmJoint(5).setData(target_joint_angle);
+	do {
+		SLEEP_MILLISEC(50);
+		youbot_arm->getArmJoint(5).getData(jointSensed);
+	} while (jointSensed.angle < 2.93 * radian);
+	target_joint_angle.angle = arm_up[0] * radian;
+	youbot_arm->getArmJoint(1).setData(target_joint_angle);
+	SLEEP_MILLISEC(4000);
+	arm_position(arm_up);
 
 	// Starting the event loop
 	while (received_sigterm == 0)
 	{
 		uint8_t rx_buffer[1024] = {0};
-		int bytes_received = serial.Read(rx_buffer, 128);
+		int bytes_received = serial_csl.Read(rx_buffer, 128);
 
 		VehiclePacket_t vehicle_packet;
 		if (parse_vehicle_packet(&vehicle_packet, rx_buffer, bytes_received))
@@ -345,23 +368,45 @@ int main()
 			<< ", yaw: " << ((float)vehicle_packet.yaw / 1250. - 1.) << endl;
 		}
 
+		// TODO: form this better (rather than declare a data portion of the packet,
+		// declare each component separately...)
 		const uint8_t health_packet_size = sizeof(HealthPacket_t);
 		static union bus {
 			HealthPacket_t health_packet;
 			uint8_t bytes[health_packet_size];
 		} tx;
 		int tx_length = form_health_packet(&tx.health_packet);
-		serial.SendBuffer(&tx.bytes[0], tx_length);
+		serial_csl.SendBuffer(&tx.bytes[0], tx_length);
+
+		quantity<si::length> longitudinalPosition, transversalPosition;
+		quantity<plane_angle> orientation;
+		youbot_base->getBasePosition(longitudinalPosition, transversalPosition,
+			orientation);
+
+		float x = longitudinalPosition / meter;
+		float y = transversalPosition / meter;
+		float psi = orientation / radian;
 
 		usleep(10000);
 	}
 
-	serial.Close();
+	serial_csl.Close();
 
-	// cout << "Please wait while stowing arm." << endl;
-	// arm_position(arm_down);
+	serial_odometry.Close();
 
-	// SLEEP_MILLISEC(4000);
+	cout << "Please wait while stowing arm." << endl;
+	barSetPoint.barSpacing = 0.0 * meter;
+	youbot_arm->getArmGripper().setData(barSetPoint);
+	SLEEP_MILLISEC(4000);
+	target_joint_angle.angle = arm_down[4] * radian;
+	youbot_arm->getArmJoint(5).setData(target_joint_angle);
+	SLEEP_MILLISEC(4000);
+	target_joint_angle.angle = arm_down[0] * radian;
+	youbot_arm->getArmJoint(1).setData(target_joint_angle);
+	SLEEP_MILLISEC(4000);
+	arm_position(arm_down);
+
+	SLEEP_MILLISEC(4000);
 
 	return 0;
 }
