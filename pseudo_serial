@@ -9,4 +9,5 @@ if pidof socat > /dev/null; then
 	echo "";
 else
 	socat -d -d pty,raw,echo=0,link=/tmp/pty1 pty,raw,echo=0,link=/tmp/pty2 &
+	socat -d -d pty,raw,echo=0,link=/tmp/pty3 pty,raw,echo=0,link=/tmp/pty4 &
 fi
