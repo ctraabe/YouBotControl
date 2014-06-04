@@ -2,6 +2,7 @@
 #include <iostream>
 #include <inttypes.h>
 #include <signal.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "youbot/YouBotBase.hpp"
@@ -39,6 +40,7 @@ struct HealthPacket_t {
 
 static void sigterm_handler(int sig)
 {
+	cout << "Received interrupt signal " << sig << endl;
 	received_sigterm = sig;
 	received_nb_signals++;
 	if (received_nb_signals > 3) exit(123);
@@ -310,7 +312,7 @@ int main()
 
 	if (!base_exists)
 		return 1;
-
+/*
 	Serial serial_csl("/tmp/pty2", 38400);  // vehicle wrapper serial comms
 	if (!serial_csl.IsOpen())
 		return 1;
@@ -318,16 +320,139 @@ int main()
 	Serial serial_odometry("/tmp/pty4", 38400);  // Odometry data output
 	if (!serial_odometry.IsOpen())
 		return 1;
+*/
+	static struct termios oldt, newt;
+	tcgetattr( STDIN_FILENO, &oldt);
+	newt = oldt;
+	// newt.c_iflag &= ~(BRKINT);
+	newt.c_lflag &= ~(ICANON | ECHO | VINTR | VQUIT);
+	// newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr( STDIN_FILENO, TCSANOW, &newt);
 
-	youbot::GripperBarSpacingSetPoint barSetPoint;
-	youbot::GripperSensedBarSpacing barSensed;
-	barSetPoint.barSpacing = 0.023 * meter;
-	youbot_arm->getArmGripper().setData(barSetPoint);
-	do {
-		SLEEP_MILLISEC(50);
-		youbot_arm->getArmGripper().getData(barSensed);
-	} while (barSensed.barSpacing < 0.022 * meter);
+/* c_iflag bits */
+cout << "--- c_iflag ---" << endl;
+cout << "IGNBRK:  " << (int)((newt.c_iflag & 0000001) == 0000001) << endl;
+cout << "BRKINT:  " << (int)((newt.c_iflag & 0000002) == 0000002) << endl;
+cout << "IGNPAR:  " << (int)((newt.c_iflag & 0000004) == 0000004) << endl;
+cout << "PARMRK:  " << (int)((newt.c_iflag & 0000010) == 0000010) << endl;
+cout << "INPCK:   " << (int)((newt.c_iflag & 0000020) == 0000020) << endl;
+cout << "ISTRIP:  " << (int)((newt.c_iflag & 0000040) == 0000040) << endl;
+cout << "INLCR:   " << (int)((newt.c_iflag & 0000100) == 0000100) << endl;
+cout << "IGNCR:   " << (int)((newt.c_iflag & 0000200) == 0000200) << endl;
+cout << "ICRNL:   " << (int)((newt.c_iflag & 0000400) == 0000400) << endl;
+cout << "IUCLC:   " << (int)((newt.c_iflag & 0001000) == 0001000) << endl;
+cout << "IXON:    " << (int)((newt.c_iflag & 0002000) == 0002000) << endl;
+cout << "IXANY:   " << (int)((newt.c_iflag & 0004000) == 0004000) << endl;
+cout << "IXOFF:   " << (int)((newt.c_iflag & 0010000) == 0010000) << endl;
+cout << "IMAXBEL: " << (int)((newt.c_iflag & 0020000) == 0020000) << endl;
+cout << "IUTF8:   " << (int)((newt.c_iflag & 0040000) == 0040000) << endl;
+/* c_oflag bits */
+cout << "--- c_oflag ---" << endl;
+cout << "OPOST:   " << (int)((newt.c_oflag & 0000001) == 0000001) << endl;
+cout << "OLCUC:   " << (int)((newt.c_oflag & 0000002) == 0000002) << endl;
+cout << "ONLCR:   " << (int)((newt.c_oflag & 0000004) == 0000004) << endl;
+cout << "OCRNL:   " << (int)((newt.c_oflag & 0000010) == 0000010) << endl;
+cout << "ONOCR:   " << (int)((newt.c_oflag & 0000020) == 0000020) << endl;
+cout << "ONLRET:  " << (int)((newt.c_oflag & 0000040) == 0000040) << endl;
+cout << "OFILL:   " << (int)((newt.c_oflag & 0000100) == 0000100) << endl;
+cout << "OFDEL:   " << (int)((newt.c_oflag & 0000200) == 0000200) << endl;
+cout << "NLDLY:   " << (int)((newt.c_oflag & 0000400) == 0000400) << endl;
+cout << "NL0:     " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "NL1:     " << (int)((newt.c_oflag & 0000400) == 0000400) << endl;
+cout << "CRDLY:   " << (int)((newt.c_oflag & 0003000) == 0003000) << endl;
+cout << "CR0:     " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "CR1:     " << (int)((newt.c_oflag & 0001000) == 0001000) << endl;
+cout << "CR2:     " << (int)((newt.c_oflag & 0002000) == 0002000) << endl;
+cout << "CR3:     " << (int)((newt.c_oflag & 0003000) == 0003000) << endl;
+cout << "TABDLY:  " << (int)((newt.c_oflag & 0014000) == 0014000) << endl;
+cout << "TAB0:    " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "TAB1:    " << (int)((newt.c_oflag & 0004000) == 0004000) << endl;
+cout << "TAB2:    " << (int)((newt.c_oflag & 0010000) == 0010000) << endl;
+cout << "TAB3:    " << (int)((newt.c_oflag & 0014000) == 0014000) << endl;
+cout << "XTABS:   " << (int)((newt.c_oflag & 0014000) == 0014000) << endl;
+cout << "BSDLY:   " << (int)((newt.c_oflag & 0020000) == 0020000) << endl;
+cout << "BS0:     " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "BS1:     " << (int)((newt.c_oflag & 0020000) == 0020000) << endl;
+cout << "VTDLY:   " << (int)((newt.c_oflag & 0040000) == 0040000) << endl;
+cout << "VT0:     " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "VT1:     " << (int)((newt.c_oflag & 0040000) == 0040000) << endl;
+cout << "FFDLY:   " << (int)((newt.c_oflag & 0100000) == 0100000) << endl;
+cout << "FF0:     " << (int)((newt.c_oflag & 0000000) == 0000000) << endl;
+cout << "FF1:     " << (int)((newt.c_oflag & 0100000) == 0100000) << endl;
+/* c_lflag bits */
+cout << "--- c_lflag ---" << endl;
+cout << "ISIG:    " << (int)((newt.c_lflag & 0000001) == 0000001) << endl;
+cout << "ICANON:  " << (int)((newt.c_lflag & 0000002) == 0000002) << endl;
+cout << "XCASE:   " << (int)((newt.c_lflag & 0000004) == 0000004) << endl;
+cout << "ECHO:    " << (int)((newt.c_lflag & 0000010) == 0000010) << endl;
+cout << "ECHOE:   " << (int)((newt.c_lflag & 0000020) == 0000020) << endl;
+cout << "ECHOK:   " << (int)((newt.c_lflag & 0000040) == 0000040) << endl;
+cout << "ECHONL:  " << (int)((newt.c_lflag & 0000100) == 0000100) << endl;
+cout << "NOFLSH:  " << (int)((newt.c_lflag & 0000200) == 0000200) << endl;
+cout << "TOSTOP:  " << (int)((newt.c_lflag & 0000400) == 0000400) << endl;
+cout << "ECHOCTL: " << (int)((newt.c_lflag & 0001000) == 0001000) << endl;
+cout << "ECHOPRT: " << (int)((newt.c_lflag & 0002000) == 0002000) << endl;
+cout << "ECHOKE:  " << (int)((newt.c_lflag & 0004000) == 0004000) << endl;
+cout << "FLUSHO:  " << (int)((newt.c_lflag & 0010000) == 0010000) << endl;
+cout << "PENDIN:  " << (int)((newt.c_lflag & 0040000) == 0040000) << endl;
+cout << "IEXTEN:  " << (int)((newt.c_lflag & 0100000) == 0100000) << endl;
+cout << "EXTPROC: " << (int)((newt.c_lflag & 0200000) == 0200000) << endl;
 
+cout << "VEOL:    " << (int)((newt.c_lflag & VEOL) == VEOL) << endl;
+cout << "VINTR:   " << (int)((newt.c_lflag & VINTR) == VINTR) << endl;
+cout << "VKILL:   " << (int)((newt.c_lflag & VKILL) == VKILL) << endl;
+cout << "VQUIT:   " << (int)((newt.c_lflag & VQUIT) == VQUIT) << endl;
+
+cout << SIGQUIT << endl;
+cout << SIGINT << endl;
+cout << SIGTERM << endl;
+
+	char keypress = 0;
+	while (keypress != 's' && keypress != 'a' && keypress != 3 && keypress != 28
+		&& received_sigterm == 0)
+	{
+		// cout << endl << "Commands:" << endl << endl;
+		// cout << "  c - Set the camera" << endl;
+		// cout << "  s - start the program" << endl;
+		// cout << "  a - abort" << endl << endl;
+
+		// Read a character from stdin then flush the buffer.
+		cin >> keypress;
+		// while ( getchar() != '\n' ) continue;
+
+		cout << (int)keypress << endl;
+
+		if (keypress == 'c')
+		{
+			youbot::GripperBarSpacingSetPoint barSetPoint;
+			youbot::GripperSensedBarSpacing barSensed;
+			barSetPoint.barSpacing = 0.023 * meter;
+			youbot_arm->getArmGripper().setData(barSetPoint);
+			do {
+				SLEEP_MILLISEC(50);
+				youbot_arm->getArmGripper().getData(barSensed);
+			} while (barSensed.barSpacing < 0.023 * meter);
+
+			SLEEP_MILLISEC(1000);
+
+			barSetPoint.barSpacing = 0.0165 * meter;
+			youbot_arm->getArmGripper().setData(barSetPoint);
+			do {
+				SLEEP_MILLISEC(50);
+				youbot_arm->getArmGripper().getData(barSensed);
+			} while (barSensed.barSpacing > 0.0165 * meter);
+
+			cout << "Press any key to clamp..." << endl;
+			getchar();
+			barSetPoint.barSpacing = 0.014 * meter;
+			youbot_arm->getArmGripper().setData(barSetPoint);
+			do {
+				SLEEP_MILLISEC(50);
+				youbot_arm->getArmGripper().getData(barSensed);
+			} while (barSensed.barSpacing > 0.014 * meter);
+		}
+	}
+/*
 	youbot::JointAngleSetpoint target_joint_angle;
 	youbot::JointSensedAngle jointSensed;
 	target_joint_angle.angle = arm_up[4] * radian;
@@ -395,9 +520,6 @@ int main()
 	serial_odometry.Close();
 
 	cout << "Please wait while stowing arm." << endl;
-	barSetPoint.barSpacing = 0.0 * meter;
-	youbot_arm->getArmGripper().setData(barSetPoint);
-	SLEEP_MILLISEC(4000);
 	target_joint_angle.angle = arm_down[4] * radian;
 	youbot_arm->getArmJoint(5).setData(target_joint_angle);
 	SLEEP_MILLISEC(4000);
@@ -407,6 +529,8 @@ int main()
 	arm_position(arm_down);
 
 	SLEEP_MILLISEC(4000);
+*/
+	tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
 
 	return 0;
 }
