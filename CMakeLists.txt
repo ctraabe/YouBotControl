@@ -38,7 +38,10 @@ INCLUDE_DIRECTORIES(
 ## Compile and link
 ADD_EXECUTABLE(youBot_CSL
   src/main.cpp
+  src/csl_youbot.cpp
+  src/read_csl_config.cpp
   src/serial.cpp
+  src/start_menu.cpp
 )
 
 TARGET_LINK_LIBRARIES(youBot_CSL 
