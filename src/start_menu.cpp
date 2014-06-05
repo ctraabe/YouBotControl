@@ -2,15 +2,14 @@
 
 #include <iostream>
 
-#include <boost/thread/thread.hpp>
-
 #include <signal.h>
 #include <termios.h>
 
-void StartMenu(volatile int &received_sigterm)
-{
-  struct termios oldt, newt;
+// TODO: make this a class with private data
+static struct termios oldt, newt;
 
+void StartMenuInitTerminal()
+{
   // Get current terminal attributes and save for later reversion.
   tcgetattr(STDIN_FILENO, &oldt);
   // Modify the terminal removing the following attributes:
@@ -21,15 +20,18 @@ void StartMenu(volatile int &received_sigterm)
   newt = oldt;
   newt.c_lflag &= ~(ICANON | ECHO | VINTR | VQUIT);
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+}
+
+enum StartMenuResult StartMenu(volatile int &received_sigterm)
+{
+  std::cout << std::endl << "Commands:" << std::endl << std::endl;
+  std::cout << "  c - Set the camera" << std::endl;
+  std::cout << "  s - start the program" << std::endl;
+  std::cout << "  a - abort" << std::endl << std::endl;
 
   char keypress = 0;
-  while (keypress != 's' && !received_sigterm)
+  while (!received_sigterm)
   {
-    std::cout << std::endl << "Commands:" << std::endl << std::endl;
-    std::cout << "  c - Set the camera" << std::endl;
-    std::cout << "  s - start the program" << std::endl;
-    std::cout << "  a - abort" << std::endl << std::endl;
-
     // Read a character from stdin then flush the buffer.
     std::cin >> keypress;
 
@@ -37,60 +39,29 @@ void StartMenu(volatile int &received_sigterm)
       case 3:  // ctrl-C
       case 'a':
       case 'A':
-      {
         raise(SIGINT);
+        return START_MENU_RESULT_ABORT;
         break;
-      }
-      case 28:
-      {
+      case 28:  // ctrl-\
         raise(SIGQUIT);
+        return START_MENU_RESULT_ABORT;
         break;
-      }
       case 'c':
       case 'C':
-      {
-        // youbot::GripperBarSpacingSetPoint barSetPoint;
-        // youbot::GripperSensedBarSpacing barSensed;
-
-        // // Fully open gripper and wait for completion.
-        // // (This step removes any backlash that may cause overestimate of width)
-        // barSetPoint.barSpacing = 0.023 * meter;
-        // youbot_arm->getArmGripper().setData(barSetPoint);
-        // do {
-        //   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-        //   youbot_arm->getArmGripper().getData(barSensed);
-        // } while (barSensed.barSpacing < 0.023 * meter);
-
-        // // Close the bar to just bigger than camera width.
-        // barSetPoint.barSpacing = 0.0165 * meter;
-        // youbot_arm->getArmGripper().setData(barSetPoint);
-        // do {
-        //   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-        //   youbot_arm->getArmGripper().getData(barSensed);
-        // } while (barSensed.barSpacing > 0.0165 * meter);
-
-        // // Wait for user input, then clamp.
-        // std::cout << "Press any key to clamp..." << std::endl;
-        // getchar();
-        // barSetPoint.barSpacing = 0.014 * meter;
-        // youbot_arm->getArmGripper().setData(barSetPoint);
-        // do {
-        //   boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-        //   youbot_arm->getArmGripper().getData(barSensed);
-        // } while (barSensed.barSpacing > 0.014 * meter);
-        // std::cout << std::endl << "Clamped!" << std::endl;
+        return START_MENU_RESULT_CLAMP;
         break;
-      }
+      case 's':
+      case 'S':
+        return START_MENU_RESULT_RUN;
+        break;
       default:
-      {
         break;
-      }
     }
-
-    // Wait a moment to make sure signals get raised.
-    boost::this_thread::sleep(boost::posix_time::milliseconds(10));
   }
+}
 
+void StartMenuRevertTerminal()
+{
   // Reset the terminal settings.
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }

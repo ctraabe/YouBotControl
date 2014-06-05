@@ -4,7 +4,8 @@
 
 #include "youbot/YouBotBase.hpp"
 
-int ReadCSLConfig(float (&arm_up)[5], float (&arm_down)[5])
+int ReadCSLConfig(float (&arm_up)[5], float (&arm_down)[5],
+  std::string &serial_csl_port, std::string &serial_odometry_port)
 {
   youbot::ConfigFile config_file("csl", CONFIG_DIR);
   // if(config_file)
@@ -38,6 +39,17 @@ int ReadCSLConfig(float (&arm_up)[5], float (&arm_down)[5])
   else
   {
     std::cout << "No \"ARM_DOWN\" section found in the config-file"
+      << std::endl;
+  }
+
+  if ( config_file.sectionExists("SERIAL_PORTS") )
+  {
+    config_file.readInto(serial_csl_port, "SERIAL_PORTS", "VEHICLE_WRAPPER");
+    config_file.readInto(serial_odometry_port, "SERIAL_PORTS", "ODOMETRY");
+  }
+  else
+  {
+    std::cout << "No \"SERIAL_PORTS\" section found in the config-file"
       << std::endl;
   }
 

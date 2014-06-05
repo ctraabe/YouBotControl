@@ -42,6 +42,7 @@ ADD_EXECUTABLE(youBot_CSL
   src/read_csl_config.cpp
   src/serial.cpp
   src/start_menu.cpp
+  src/vehicle_wrapper_comms.cpp
 )
 
 TARGET_LINK_LIBRARIES(youBot_CSL 
