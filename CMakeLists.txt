@@ -39,6 +39,7 @@ INCLUDE_DIRECTORIES(
 ADD_EXECUTABLE(youBot_CSL
   src/main.cpp
   src/csl_youbot.cpp
+  src/odometry.cpp
   src/read_csl_config.cpp
   src/serial.cpp
   src/start_menu.cpp

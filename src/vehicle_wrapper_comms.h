@@ -15,8 +15,8 @@ struct VehiclePacket_t {
   int16_t roll;
 } __attribute__((packed));
 
-void send_health_packet(Serial& serial);
+void SendHealthPacket(Serial& serial);
 
-bool parse_vehicle_packet(Serial& serial, VehiclePacket_t& vehicle_packet);
+bool ParseVehiclePacket(Serial& serial, VehiclePacket_t& vehicle_packet);
 
 #endif // VEHICLE_WRAPPER_COMMS_H_

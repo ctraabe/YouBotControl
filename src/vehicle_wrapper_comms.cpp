@@ -46,17 +46,7 @@ struct HealthPacket_t {
   uint16_t settings;
 } __attribute__((packed));
 
-static uint16_t checksum(const uint8_t* data, size_t length)
-{
-  uint16_t sum = 0;
-
-  for (size_t i = 0; i < length; ++i)
-    sum += data[i];
-
-  return sum;
-}
-
-static void convert_endienness(uint16_t* word)
+static void ConvertEndienness(uint16_t* word)
 {
   uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
   uint8_t temp = byte_array[0];
@@ -64,7 +54,7 @@ static void convert_endienness(uint16_t* word)
   byte_array[1] = temp;
 }
 
-static void convert_endienness(int16_t* word)
+static void ConvertEndienness(int16_t* word)
 {
   uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
   uint8_t temp = byte_array[0];
@@ -72,7 +62,7 @@ static void convert_endienness(int16_t* word)
   byte_array[1] = temp;
 }
 
-static void convert_endienness(uint32_t* word) {
+static void ConvertEndienness(uint32_t* word) {
   uint8_t* byte_array = static_cast<uint8_t*>(static_cast<void*>(word));
   uint8_t temp = byte_array[0];
   byte_array[0] = byte_array[1];
@@ -82,7 +72,7 @@ static void convert_endienness(uint32_t* word) {
   byte_array[3] = temp;
 }
 
-void send_health_packet(Serial& serial)
+void SendHealthPacket(Serial& serial)
 {
   static uint16_t counter = 0;
   const uint8_t health_packet_size = sizeof(HealthPacket_t);
@@ -107,17 +97,17 @@ void send_health_packet(Serial& serial)
     + tx.health_packet.estimated_voltage
     + tx.health_packet.settings;
 
-  convert_endienness(&tx.health_packet.timestamp);
-  convert_endienness(&tx.health_packet.header);
-  convert_endienness(&tx.health_packet.checksum);
-  convert_endienness(&tx.health_packet.measured_voltage);
-  convert_endienness(&tx.health_packet.estimated_voltage);
-  convert_endienness(&tx.health_packet.settings);
+  ConvertEndienness(&tx.health_packet.timestamp);
+  ConvertEndienness(&tx.health_packet.header);
+  ConvertEndienness(&tx.health_packet.checksum);
+  ConvertEndienness(&tx.health_packet.measured_voltage);
+  ConvertEndienness(&tx.health_packet.estimated_voltage);
+  ConvertEndienness(&tx.health_packet.settings);
 
   serial.SendBuffer(&tx.bytes[0], health_packet_size);
 }
 
-bool parse_vehicle_packet(Serial& serial, VehiclePacket_t& vehicle_packet)
+bool ParseVehiclePacket(Serial& serial, VehiclePacket_t& vehicle_packet)
 {
   uint8_t rx_buffer[1024] = {0};
   int num_bytes_received = serial.Read(rx_buffer, 1024);
@@ -152,13 +142,13 @@ bool parse_vehicle_packet(Serial& serial, VehiclePacket_t& vehicle_packet)
     num_bytes_stored = -1;  // Start looking for the header again
     last_byte_received = 0;
 
-    convert_endienness(&rx.vehicle_packet.motor_mask[0]);
-    convert_endienness(&rx.vehicle_packet.motor_mask[1]);
-    convert_endienness(&rx.vehicle_packet.checksum);
-    convert_endienness(&rx.vehicle_packet.collective);
-    convert_endienness(&rx.vehicle_packet.yaw);
-    convert_endienness(&rx.vehicle_packet.pitch);
-    convert_endienness(&rx.vehicle_packet.roll);
+    ConvertEndienness(&rx.vehicle_packet.motor_mask[0]);
+    ConvertEndienness(&rx.vehicle_packet.motor_mask[1]);
+    ConvertEndienness(&rx.vehicle_packet.checksum);
+    ConvertEndienness(&rx.vehicle_packet.collective);
+    ConvertEndienness(&rx.vehicle_packet.yaw);
+    ConvertEndienness(&rx.vehicle_packet.pitch);
+    ConvertEndienness(&rx.vehicle_packet.roll);
 
     uint16_t computed_checksum = rx.vehicle_packet.motor_mask[0]
       + rx.vehicle_packet.motor_mask[1]

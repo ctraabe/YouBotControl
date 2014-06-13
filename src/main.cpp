@@ -120,7 +120,7 @@ int main()
     {
       // Poll vehicle wrapper for commands and execute if received.
       VehiclePacket_t vehicle_packet;
-      if (parse_vehicle_packet(serial_csl, vehicle_packet))
+      if (ParseVehiclePacket(serial_csl, vehicle_packet))
       {
         try
         {
@@ -140,18 +140,19 @@ int main()
       }
 
       // Send health packet to vehicle wrapper.
-      send_health_packet(serial_csl);
+      SendHealthPacket(serial_csl);
 
       quantity<si::length> longitudinalPosition, transversalPosition;
       quantity<plane_angle> orientation;
       csl_youbot.GetBasePosition(longitudinalPosition, transversalPosition,
         orientation);
 
-      float x = longitudinalPosition / meter;
-      float y = transversalPosition / meter;
-      float psi = orientation / radian;
+      static float x = 0.0, y = 0.0, z = 0.0;
+      x = longitudinalPosition / meter;
+      y = transversalPosition / meter;
+      psi = orientation / radian;
 
-      // TODO: Send odometry packet to fusion.
+      SendOdometryPacket(x, y, psi, send_odometry);
 
       SLEEP_MILLISEC(10);
     }
