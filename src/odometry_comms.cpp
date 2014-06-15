@@ -1,6 +1,6 @@
 #include "odometry_comms.h"
 
-#include "Timing.h"
+// #include "<chrono>"
 
 static uint16_t Checksum(const uint8_t* data, size_t length)
 {
@@ -20,11 +20,11 @@ void SendOdometryPacket(float &x, float &y, float &psi, Serial& serial)
     uint8_t bytes[pose_packet_size];
   } tx;
 
-  auto timestamp = std::chrono::duration_cast<
-      std::chrono::microseconds>(mtpPoseTime.time_since_epoch()).count();
+  // auto timestamp = std::chrono::duration_cast<
+  //     std::chrono::microseconds>(mtpPoseTime.time_since_epoch()).count();
 
   tx.packet.Header = 0xE5;
-  tx.packet.Time = timestamp;
+  tx.packet.Time = 0;
   tx.packet.Position[0] = x;
   tx.packet.Position[1] = y;
   tx.packet.Position[2] = 0.0;

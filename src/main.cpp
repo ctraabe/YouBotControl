@@ -9,6 +9,7 @@
 #include "youbot/YouBotManipulator.hpp"
 
 #include "csl_youbot.h"
+#include "odometry_comms.h"
 #include "read_csl_config.h"
 #include "serial.h"
 #include "start_menu.h"
@@ -49,7 +50,7 @@ void CameraClamp(CSLYouBot &csl_youbot)
   // Wait for user input, then clamp.
   std::cout << "Press any key to clamp..." << std::endl;
   getchar();
-  csl_youbot.SetGripperSpacing(0.014 * meter);
+  csl_youbot.SetGripperSpacing(0.012 * meter);
   csl_youbot.WaitForGripper(received_sigterm);
   std::cout << std::endl << "Clamped!" << std::endl;
 }
@@ -127,7 +128,7 @@ int main()
           csl_youbot.SetBaseVelocity(
             -0.75 * ((float)vehicle_packet.pitch / 1250. - 1.) * meter_per_second,
             0.75 * ((float)vehicle_packet.roll / 1250. - 1.) * meter_per_second,
-            2.0 * ((float)vehicle_packet.yaw / 1250. - 1.) * radian_per_second);
+            0.5 * ((float)vehicle_packet.yaw / 1250. - 1.) * radian_per_second);
         }
         catch(exception& ex)
         {
@@ -147,12 +148,12 @@ int main()
       csl_youbot.GetBasePosition(longitudinalPosition, transversalPosition,
         orientation);
 
-      static float x = 0.0, y = 0.0, z = 0.0;
+      static float x = 0.0, y = 0.0, psi = 0.0;
       x = longitudinalPosition / meter;
       y = transversalPosition / meter;
       psi = orientation / radian;
 
-      SendOdometryPacket(x, y, psi, send_odometry);
+      SendOdometryPacket(x, y, psi, serial_odometry);
 
       SLEEP_MILLISEC(10);
     }
