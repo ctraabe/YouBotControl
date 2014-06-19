@@ -101,7 +101,7 @@ Serial::Serial(const std::string &comport, const int baudrate)
     Close();
     std::cerr << "ERROR: Unable to read settings on " << comport << "."
       << std::endl;
-    return;
+      return;
   }
 
   struct termios new_port_settings = {0};
@@ -140,12 +140,9 @@ int Serial::SendBuffer(const unsigned char* const buffer, const int length)
 
 void Serial::Close()
 {
-  if (id_ != -1)
-  {
-    close(id_);
-    tcsetattr(id_, TCSANOW, &original_port_settings_);
-    id_ = -1;
-  }
+  close(id_);
+  tcsetattr(id_, TCSANOW, &original_port_settings_);
+  id_ = -1;
 }
 
 
