@@ -86,8 +86,8 @@ void SendHealthPacket(Serial& serial)
   tx.health_packet.timestamp = ++counter;
   tx.health_packet.header = MASK_MEASURED_VOLTAGE | MASK_ESTIMATED_VOLTAGE
     | MASK_SETTINGS;
-  tx.health_packet.measured_voltage = (uint16_t)(12.0 * 204.6);
-  tx.health_packet.estimated_voltage = (uint16_t)(12.0 * 204.6);
+  tx.health_packet.measured_voltage = (uint16_t)(12.0 * 204.6 / 2.6);
+  tx.health_packet.estimated_voltage = (uint16_t)(12.0 * 204.6 / 2.6);
   tx.health_packet.settings = 0x0001;
 
   tx.health_packet.checksum = tx.health_packet.timestamp

@@ -22,15 +22,16 @@ void SendOdometryPacket(float &x, float &y, float &psi, Serial& serial)
 
   // auto timestamp = std::chrono::duration_cast<
   //     std::chrono::microseconds>(mtpPoseTime.time_since_epoch()).count();
+  static unsigned timestamp = 0;
 
   tx.packet.Header = 0xE5;
-  tx.packet.Time = 0;
+  tx.packet.Time = ++timestamp;
   tx.packet.Position[0] = x;
   tx.packet.Position[1] = y;
   tx.packet.Position[2] = 0.0;
-  tx.packet.Yaw = 0.0;
+  tx.packet.Yaw = psi;
   tx.packet.Pitch = 0.0;
-  tx.packet.Roll = psi;
+  tx.packet.Roll = 3.14;
   tx.packet.HasTracking = 3;  // Temporarily match PTAM output
   tx.packet.Checksum = 0;
 
