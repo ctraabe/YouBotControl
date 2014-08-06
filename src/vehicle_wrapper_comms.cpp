@@ -43,6 +43,7 @@ struct HealthPacket_t {
   uint16_t checksum;
   uint16_t measured_voltage;
   uint16_t estimated_voltage;
+  uint16_t ticks_since_last;
   uint16_t settings;
 } __attribute__((packed));
 
@@ -85,9 +86,10 @@ void SendHealthPacket(Serial& serial)
   tx.health_packet.sync_char[1] = '~';
   tx.health_packet.timestamp = ++counter;
   tx.health_packet.header = MASK_MEASURED_VOLTAGE | MASK_ESTIMATED_VOLTAGE
-    | MASK_SETTINGS;
+    | MASK_TICKS_SINCE_LAST | MASK_SETTINGS;
   tx.health_packet.measured_voltage = (uint16_t)(12.0 * 204.6 / 2.6);
   tx.health_packet.estimated_voltage = (uint16_t)(12.0 * 204.6 / 2.6);
+  tx.health_packet.ticks_since_last = 2;  // Harcoded value matches segway
   tx.health_packet.settings = 0x0001;
 
   tx.health_packet.checksum = tx.health_packet.timestamp
@@ -95,6 +97,7 @@ void SendHealthPacket(Serial& serial)
     + (uint16_t)(tx.health_packet.header & 0x0000FFFF)
     + tx.health_packet.measured_voltage
     + tx.health_packet.estimated_voltage
+    + tx.health_packet.ticks_since_last
     + tx.health_packet.settings;
 
   ConvertEndienness(&tx.health_packet.timestamp);
@@ -102,6 +105,7 @@ void SendHealthPacket(Serial& serial)
   ConvertEndienness(&tx.health_packet.checksum);
   ConvertEndienness(&tx.health_packet.measured_voltage);
   ConvertEndienness(&tx.health_packet.estimated_voltage);
+  ConvertEndienness(&tx.health_packet.ticks_since_last);
   ConvertEndienness(&tx.health_packet.settings);
 
   serial.SendBuffer(&tx.bytes[0], health_packet_size);

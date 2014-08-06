@@ -145,9 +145,9 @@ int main()
         orientation);
 
       static float x = 0.0, y = 0.0, psi = 0.0;
-      x = longitudinalPosition / meter;
-      y = transversalPosition / meter;
-      psi = orientation / radian;
+      x = -transversalPosition / meter;
+      y = longitudinalPosition / meter;
+      psi = orientation / radian + M_PI / 2.0;
 
       SendOdometryPacket(x, y, psi, serial_odometry);
       static int counter = 1;
