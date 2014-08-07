@@ -3,7 +3,10 @@
 
 #include <string>
 
-int ReadCSLConfig(float (&arm_up)[5], float (&arm_down)[5],
-  std::string &serial_csl_port, std::string &serial_odometry_port);
+int ReadConfigArm(bool &use, float (&arm_up)[5], float (&arm_down)[5]);
+
+int ReadConfigCSLSerial(bool &use, std::string &port, int &baudrate);
+
+int ReadConfigOdometrySerial(bool &use, std::string &port, int &baudrate);
 
 #endif // READ_CONFIG_H_

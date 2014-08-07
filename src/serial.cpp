@@ -10,6 +10,14 @@ Serial::Serial(const std::string &comport, const int baudrate)
   : id_(-1)
   , original_port_settings_({0})
 {
+  Open(comport, baudrate);
+}
+
+int Serial::Open(const std::string &comport, const int baudrate)
+{
+  if (id_ != -1)
+    return -1;
+
   int baudrate_code = B0;  // Hangup.
   switch(baudrate)
   {
@@ -85,14 +93,14 @@ Serial::Serial(const std::string &comport, const int baudrate)
     default :
       std::cerr << "Failed to open " << comport << ". Invalid baudrate."
         << std::endl;
-      return;
+      return -1;
       break;
   }
 
   id_ = open(comport.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
   if (id_ == -1) {
     std::cerr << "Failed to open " << comport << "." << std::endl;
-    return;
+    return -1;
   }
 
   int error = tcgetattr(id_, &original_port_settings_);
@@ -101,7 +109,7 @@ Serial::Serial(const std::string &comport, const int baudrate)
     Close();
     std::cerr << "ERROR: Unable to read settings on " << comport << "."
       << std::endl;
-      return;
+      return -1;
   }
 
   struct termios new_port_settings = {0};
@@ -113,8 +121,10 @@ Serial::Serial(const std::string &comport, const int baudrate)
     Close();
     std::cerr << "ERROR: Unable to adjust settings on " << comport << "."
       << std::endl;
-    return;
+    return -1;
   }
+
+  return 0;
 }
 
 int Serial::Read(unsigned char* const buffer, const int length)

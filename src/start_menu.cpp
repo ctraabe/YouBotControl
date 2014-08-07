@@ -22,10 +22,10 @@ void StartMenuInitTerminal()
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 }
 
-enum StartMenuResult StartMenu(volatile int &received_sigterm)
+enum StartMenuResult StartMenu(bool use_arm, volatile int &received_sigterm)
 {
   std::cout << std::endl << "Commands:" << std::endl << std::endl;
-  std::cout << "  c - Set the camera" << std::endl;
+  if (use_arm) std::cout << "  c - Set the camera" << std::endl;
   std::cout << "  s - start the program" << std::endl;
   std::cout << "  a - abort" << std::endl << std::endl;
 
@@ -48,7 +48,7 @@ enum StartMenuResult StartMenu(volatile int &received_sigterm)
         break;
       case 'c':
       case 'C':
-        return START_MENU_RESULT_CLAMP;
+        if (use_arm) return START_MENU_RESULT_CLAMP;
         break;
       case 's':
       case 'S':

@@ -9,7 +9,7 @@ enum StartMenuResult
 };
 
 void StartMenuInitTerminal();
-enum StartMenuResult StartMenu(volatile int &received_sigterm);
+enum StartMenuResult StartMenu(bool use_arm, volatile int &received_sigterm);
 void StartMenuRevertTerminal();
 
 #endif // START_MENU_H_

@@ -2,9 +2,10 @@
 
 #include <iostream>
 
-CSLYouBot::CSLYouBot()
-  : youbot_base_("youbot-base", YOUBOT_CONFIGURATIONS_DIR),
-    youbot_arm_("youbot-manipulator", YOUBOT_CONFIGURATIONS_DIR)
+CSLYouBot::CSLYouBot(bool use_arm)
+  : use_arm_(use_arm)
+  , youbot_base_("youbot-base", YOUBOT_CONFIGURATIONS_DIR)
+  , youbot_arm_("youbot-manipulator", YOUBOT_CONFIGURATIONS_DIR)
 {
   youbot_base_.doJointCommutation();
 
@@ -12,8 +13,10 @@ CSLYouBot::CSLYouBot()
   youbot::MotorAcceleration acceleration;
   acceleration.setParameter( angAcc.from_value(100000.0) );
 
-  youbot_arm_.doJointCommutation();
-  youbot_arm_.calibrateManipulator();
+  if (use_arm) {
+    youbot_arm_.doJointCommutation();
+    youbot_arm_.calibrateManipulator();
+  }
 }
 
 quantity<plane_angle> CSLYouBot::GetJointAngle(const int &joint)

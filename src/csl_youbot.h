@@ -7,7 +7,7 @@
 class CSLYouBot
 {
   public:
-    CSLYouBot();
+    CSLYouBot(bool use_arm = true);
 
     void GetBasePosition(quantity<si::length> &x, quantity<si::length> &y,
       quantity<plane_angle> &psi)
@@ -30,6 +30,7 @@ class CSLYouBot
     void WaitForGripper(volatile int &received_sigterm);
 
   private:
+    bool use_arm_;
     youbot::YouBotBase youbot_base_;
     youbot::YouBotManipulator youbot_arm_;
     youbot::JointAngleSetpoint joint_angle_setpoint_[5];

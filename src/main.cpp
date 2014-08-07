@@ -61,38 +61,57 @@ int main()
   signal(SIGINT , sigterm_handler); /* Interrupt (ANSI).  */
   signal(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
 
+  // User supplied variables and default values.
+  bool use_arm = false, do_csl_comms = false, do_odemtry_comms = false;
   float arm_up[5] = {1.0, 1.0, -1.0, 1.0, 1.0},
     arm_down[5] = {0.11, 0.11, -0.11, 0.11, 0.12};
   string serial_csl_port("/dev/ttyUSB0");
   string serial_odometry_port("/dev/ttyUSB1");
+  int serial_csl_baudrate = 38400, serial_odometry_baudrate = 38400;
 
-  ReadCSLConfig(arm_up, arm_down, serial_csl_port, serial_odometry_port);
+  ReadConfigArm(use_arm, arm_up, arm_down);
+  ReadConfigCSLSerial(do_csl_comms, serial_csl_port, serial_csl_baudrate);
+  ReadConfigOdometrySerial(do_odemtry_comms, serial_odometry_port,
+    serial_odometry_baudrate);
 
-  Serial serial_csl(serial_csl_port, 38400);  // vehicle wrapper serial comms
-  Serial serial_odometry(serial_odometry_port, 38400);  // Odometry data output
+  // Vehicle wrapper serial comms.
+  Serial serial_csl;
+  if (do_csl_comms)
+    serial_csl.Open(serial_csl_port, serial_csl_baudrate);
+
+  // Odometry data output.
+  Serial serial_odometry;
+  if (do_odemtry_comms)
+    serial_odometry.Open(serial_odometry_port, serial_odometry_baudrate);
 
   // Quit if failed to open either serial port.
-  if (!serial_csl.IsOpen() || !serial_odometry.IsOpen())
+  if (do_csl_comms && !serial_csl.IsOpen()
+    || do_odemtry_comms && !serial_odometry.IsOpen())
+  {
     return CloseSeiralAndReturn(serial_csl, serial_odometry, 1);
+  }
 
   try
   {
-    CSLYouBot csl_youbot;
+    CSLYouBot csl_youbot(use_arm);
 
-    // Make sure the arm is in the stowed position (can be canceled).
-    for (int joint = 1; joint <= ARMJOINTS; ++joint)
-      csl_youbot.SetJointAngle(joint, arm_down[joint-1] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+    if (use_arm)
+    {
+      // Make sure the arm is in the stowed position (can be canceled).
+      for (int joint = 1; joint <= ARMJOINTS; ++joint)
+        csl_youbot.SetJointAngle(joint, arm_down[joint-1] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
 
-    // Clear the interrupt (user must push ctrl-C again to cancel program).
-    received_sigterm = 0;
+      // Clear the interrupt (user must push ctrl-C again to cancel program).
+      received_sigterm = 0;
+    }
 
     // Start menu (including camera clamping).
     StartMenuInitTerminal();
     enum StartMenuResult start_menu_result;
     do
     {
-      start_menu_result = StartMenu(received_sigterm);
+      start_menu_result = StartMenu(use_arm, received_sigterm);
       if (start_menu_result == START_MENU_RESULT_CLAMP)
       {
         CameraClamp(csl_youbot);
@@ -105,23 +124,25 @@ int main()
       return CloseSeiralAndReturn(serial_csl, serial_odometry, 0);
 
     // Put the arm up.
-    csl_youbot.SetJointAngle(5, arm_up[4] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+    if (use_arm) {
+      csl_youbot.SetJointAngle(5, arm_up[4] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
 
-    csl_youbot.SetJointAngle(1, arm_up[0] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+      csl_youbot.SetJointAngle(1, arm_up[0] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
 
-    csl_youbot.SetJointAngle(2, arm_up[1] * radian);
-    csl_youbot.SetJointAngle(3, arm_up[2] * radian);
-    csl_youbot.SetJointAngle(4, arm_up[3] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+      csl_youbot.SetJointAngle(2, arm_up[1] * radian);
+      csl_youbot.SetJointAngle(3, arm_up[2] * radian);
+      csl_youbot.SetJointAngle(4, arm_up[3] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
+    }
 
     // Starting the main loop.
     while (!received_sigterm)
     {
       // Poll vehicle wrapper for commands and execute if received.
       VehiclePacket_t vehicle_packet;
-      if (ParseVehiclePacket(serial_csl, vehicle_packet))
+      if (do_csl_comms && ParseVehiclePacket(serial_csl, vehicle_packet))
       {
         try
         {
@@ -137,7 +158,7 @@ int main()
       }
 
       // Send health packet to vehicle wrapper.
-      SendHealthPacket(serial_csl);
+      if (do_csl_comms) SendHealthPacket(serial_csl);
 
       quantity<si::length> longitudinalPosition, transversalPosition;
       quantity<plane_angle> orientation;
@@ -145,11 +166,13 @@ int main()
         orientation);
 
       static float x = 0.0, y = 0.0, psi = 0.0;
-      x = -transversalPosition / meter;
-      y = longitudinalPosition / meter;
-      psi = orientation / radian + M_PI / 2.0;
+      x = longitudinalPosition / meter;
+      y = transversalPosition / meter;
+      psi = orientation / radian;
 
-      SendOdometryPacket(x, y, psi, serial_odometry);
+      if (do_odemtry_comms) SendOdometryPacket(x, y, psi, serial_odometry);
+
+      // Output command and odometry to screen @ 1 sec intervals
       static int counter = 1;
       if (!--counter)
       {
@@ -157,7 +180,8 @@ int main()
         cout << "pitch: " << -((float)vehicle_packet.pitch / 1250. - 1.)
           << ", roll: " << ((float)vehicle_packet.roll / 1250. - 1.)
           << ", yaw: " << ((float)vehicle_packet.yaw / 1250. - 1.) << endl;
-        cout << "x: " << x << " y: " << y << " psi: " << psi * 180.0 / 3.14159 << endl;
+        cout << "x: " << x << " y: " << y << " psi: " << psi * 180.0 / 3.14159
+          << endl;
       }
 
       SLEEP_MILLISEC(10);
@@ -169,16 +193,20 @@ int main()
     // Clear the interrupt (user must push ctrl-C again to cancel stow).
     received_sigterm = 0;
 
-    csl_youbot.SetJointAngle(2, arm_down[1] * radian);
-    csl_youbot.SetJointAngle(3, arm_down[2] * radian);
-    csl_youbot.SetJointAngle(4, arm_down[3] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+    // Put the arm back in the stowed position.
+    if (use_arm)
+    {
+      csl_youbot.SetJointAngle(2, arm_down[1] * radian);
+      csl_youbot.SetJointAngle(3, arm_down[2] * radian);
+      csl_youbot.SetJointAngle(4, arm_down[3] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
 
-    csl_youbot.SetJointAngle(1, arm_down[0] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+      csl_youbot.SetJointAngle(1, arm_down[0] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
 
-    csl_youbot.SetJointAngle(5, arm_down[4] * radian);
-    csl_youbot.WaitForArm(received_sigterm);
+      csl_youbot.SetJointAngle(5, arm_down[4] * radian);
+      csl_youbot.WaitForArm(received_sigterm);
+    }
   }
   catch (exception& ex)
   {
