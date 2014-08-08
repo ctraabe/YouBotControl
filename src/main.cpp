@@ -15,6 +15,8 @@
 #include "start_menu.h"
 #include "vehicle_wrapper_comms.h"
 
+#define MAIN_LOOP_FREQUENCY 50
+
 static volatile int received_sigterm = 0;
 static volatile int received_nb_signals = 0;
 
@@ -176,7 +178,8 @@ int main()
       static int counter = 1;
       if (!--counter)
       {
-        counter = 100;
+        // Output every second
+        counter = MAIN_LOOP_FREQUENCY;
         cout << "pitch: " << -((float)vehicle_packet.pitch / 1250. - 1.)
           << ", roll: " << ((float)vehicle_packet.roll / 1250. - 1.)
           << ", yaw: " << ((float)vehicle_packet.yaw / 1250. - 1.) << endl;
@@ -184,7 +187,7 @@ int main()
           << endl;
       }
 
-      SLEEP_MILLISEC(10);
+      SLEEP_MILLISEC(1000 / MAIN_LOOP_FREQUENCY);
     }
 
     csl_youbot.SetBaseVelocity(0.0 * meter_per_second, 0.0 * meter_per_second,
