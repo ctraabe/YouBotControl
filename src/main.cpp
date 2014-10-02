@@ -15,7 +15,8 @@
 #include "start_menu.h"
 #include "vehicle_wrapper_comms.h"
 
-#define MAIN_LOOP_FREQUENCY 50
+#define MAIN_LOOP_FREQUENCY 100
+#define COMMAND_TIMEOUT 0.5
 
 static volatile int received_sigterm = 0;
 static volatile int received_nb_signals = 0;
@@ -144,18 +145,29 @@ int main()
     {
       // Poll vehicle wrapper for commands and execute if received.
       VehiclePacket_t vehicle_packet;
+      static double timeout = 999.9;
       if (do_csl_comms && ParseVehiclePacket(serial_csl, vehicle_packet))
       {
         try
         {
           csl_youbot.SetBaseVelocity(
-            0.75 * ((float)vehicle_packet.pitch / 1250. - 1.) * meter_per_second,
-            -0.75 * ((float)vehicle_packet.roll / 1250. - 1.) * meter_per_second,
-            0.5 * ((float)vehicle_packet.yaw / 1250. - 1.) * radian_per_second);
+            vehicle_packet.channel1 * meter_per_second,
+            -vehicle_packet.channel2 * meter_per_second,
+            vehicle_packet.channel3 * radian_per_second);
+          timeout = 0.0;
         }
         catch(exception& ex)
         {
           cout << "BaseWHAT: " << ex.what() << endl;
+        }
+      }
+      else
+      {
+        timeout += 1. / (double)MAIN_LOOP_FREQUENCY;
+        if (timeout > COMMAND_TIMEOUT)
+        {
+          csl_youbot.SetBaseVelocity(0.0 * meter_per_second,
+            0.0 * meter_per_second, 0.0 * radian_per_second);
         }
       }
 
@@ -180,11 +192,11 @@ int main()
       {
         // Output every second
         counter = MAIN_LOOP_FREQUENCY;
-        cout << "pitch: " << -((float)vehicle_packet.pitch / 1250. - 1.)
-          << ", roll: " << ((float)vehicle_packet.roll / 1250. - 1.)
-          << ", yaw: " << ((float)vehicle_packet.yaw / 1250. - 1.) << endl;
-        cout << "x: " << x << " y: " << y << " psi: " << psi * 180.0 / 3.14159
-          << endl;
+        cout << "pitch: " << vehicle_packet.channel1
+          << ", roll: " << vehicle_packet.channel2
+          << ", yaw: " << vehicle_packet.channel3 << endl;
+        // cout << "x: " << x << " y: " << y << " psi: " << psi * 180.0 / 3.14159
+        //   << endl;
       }
 
       SLEEP_MILLISEC(1000 / MAIN_LOOP_FREQUENCY);

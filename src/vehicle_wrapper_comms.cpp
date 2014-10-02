@@ -118,7 +118,7 @@ bool ParseVehiclePacket(Serial& serial, VehiclePacket_t& vehicle_packet)
 
   const uint8_t vehicle_packet_size = sizeof(VehiclePacket_t);
   static union bus {
-    VehiclePacket_t vehicle_packet;
+    VehiclePacket_t packet;
     uint8_t bytes[vehicle_packet_size];
   } rx;
 
@@ -146,28 +146,29 @@ bool ParseVehiclePacket(Serial& serial, VehiclePacket_t& vehicle_packet)
     num_bytes_stored = -1;  // Start looking for the header again
     last_byte_received = 0;
 
-    ConvertEndienness(&rx.vehicle_packet.motor_mask[0]);
-    ConvertEndienness(&rx.vehicle_packet.motor_mask[1]);
-    ConvertEndienness(&rx.vehicle_packet.checksum);
-    ConvertEndienness(&rx.vehicle_packet.collective);
-    ConvertEndienness(&rx.vehicle_packet.yaw);
-    ConvertEndienness(&rx.vehicle_packet.pitch);
-    ConvertEndienness(&rx.vehicle_packet.roll);
+    union {
+      uint16_t uint16;
+      uint8_t bytes[2];
+    } computed_crc;
 
-    uint16_t computed_checksum = rx.vehicle_packet.motor_mask[0]
-      + rx.vehicle_packet.motor_mask[1]
-      + (uint16_t)(rx.vehicle_packet.collective
-      + rx.vehicle_packet.yaw + rx.vehicle_packet.pitch
-      + rx.vehicle_packet.roll);
-    if (rx.vehicle_packet.checksum == computed_checksum)
+    // CRC
+    computed_crc.bytes[0] = '~' + '~';
+    computed_crc.bytes[1] = '~' + computed_crc.bytes[0];
+    for (unsigned i = 0; i < vehicle_packet_size - 2; ++i)
     {
-      vehicle_packet = rx.vehicle_packet;
+      computed_crc.bytes[0] += rx.bytes[i];
+      computed_crc.bytes[1] += computed_crc.bytes[0];
+    }
+
+    if (rx.packet.crc == computed_crc.uint16)
+    {
+      vehicle_packet = rx.packet;
       return true;
     }
     else
     {
-      std::cout << "Checksum error: expected " << rx.vehicle_packet.checksum
-        << " but computed " << computed_checksum << std::endl;
+      std::cout << "Checksum error: expected " << rx.packet.crc
+        << " but computed " << computed_crc.uint16 << std::endl;
     }
   }
 

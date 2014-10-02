@@ -7,12 +7,11 @@
 
 // Definition of packet from vehicle wrapper
 struct VehiclePacket_t {
-  uint16_t motor_mask[2];
-  uint16_t checksum;
-  int16_t collective;
-  int16_t yaw;
-  int16_t pitch;
-  int16_t roll;
+  float channel1;
+  float channel2;
+  float channel3;
+  float channel4;
+  uint16_t crc;
 } __attribute__((packed));
 
 void SendHealthPacket(Serial& serial);
