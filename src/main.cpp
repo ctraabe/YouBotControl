@@ -15,7 +15,7 @@
 #include "start_menu.h"
 #include "vehicle_wrapper_comms.h"
 
-#define MAIN_LOOP_FREQUENCY 100
+#define MAIN_LOOP_FREQUENCY 50
 #define COMMAND_TIMEOUT 0.5
 
 static volatile int received_sigterm = 0;
