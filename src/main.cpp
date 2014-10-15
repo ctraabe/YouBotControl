@@ -129,8 +129,6 @@ int main()
     // Put the arm up.
     if (use_arm) {
       csl_youbot.SetJointAngle(5, arm_up[4] * radian);
-      csl_youbot.WaitForArm(received_sigterm);
-
       csl_youbot.SetJointAngle(1, arm_up[0] * radian);
       csl_youbot.WaitForArm(received_sigterm);
 
@@ -217,8 +215,6 @@ int main()
       csl_youbot.WaitForArm(received_sigterm);
 
       csl_youbot.SetJointAngle(1, arm_down[0] * radian);
-      csl_youbot.WaitForArm(received_sigterm);
-
       csl_youbot.SetJointAngle(5, arm_down[4] * radian);
       csl_youbot.WaitForArm(received_sigterm);
     }
